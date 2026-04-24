@@ -1,180 +1,133 @@
 <!DOCTYPE html>
-<html lang="tr">
+<html>
 <head>
-    <meta charset="UTF-8">
-    <title>Infinity AI | Interactive Logic</title>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <title>CS2 WebVR - Red Infinity</title>
+    <script src="https://aframe.io/releases/1.4.0/aframe.min.js"></script>
     <style>
-        :root { 
-            --emerald: #00ff41; 
-            --bg: #050505; 
-            --panel: #111; 
-            --radius: 25px; 
+        #loading-screen {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: black; z-index: 999; display: flex;
+            flex-direction: column; align-items: center; justify-content: center;
+            transition: opacity 1.5s ease-in-out;
         }
-        * { box-sizing: border-box; transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1); font-family: 'Segoe UI', sans-serif; }
-        body, html { margin: 0; padding: 0; background: var(--bg); color: #fff; height: 100%; overflow: hidden; }
-
-        /* UI ELEMENTS */
-        #top-bar { position: fixed; top: 0; width: 100%; height: 70px; background: rgba(10,10,10,0.9); backdrop-filter: blur(15px); display: flex; align-items: center; padding: 0 30px; border-bottom: 1px solid var(--emerald); z-index: 100; }
-        #sidebar { position: fixed; top: 0; left: -320px; width: 320px; height: 100%; background: var(--panel); z-index: 1001; padding: 100px 30px; border-right: 2px solid var(--emerald); }
-        #sidebar.active { left: 0; }
-
-        /* CHAT AREA */
-        #viewport { height: 100vh; padding: 90px 12% 130px; overflow-y: auto; display: flex; flex-direction: column; gap: 20px; scrollbar-width: none; }
-        .msg { padding: 18px 25px; border-radius: var(--radius); max-width: 80%; line-height: 1.6; animation: emerge 0.4s ease; }
-        .ai { background: rgba(0, 255, 65, 0.05); align-self: flex-start; border: 1px solid rgba(0, 255, 65, 0.2); border-bottom-left-radius: 4px; }
-        .user { background: #1a1a1a; align-self: flex-end; border-right: 4px solid var(--emerald); border-bottom-right-radius: 4px; }
-
-        /* INTERACTIVE BUTTONS */
-        .option-container { display: flex; flex-direction: column; gap: 10px; margin-top: 15px; }
-        .opt-btn { 
-            background: transparent; border: 1px solid var(--emerald); color: var(--emerald); 
-            padding: 12px 20px; border-radius: 15px; cursor: pointer; text-align: left;
-            font-weight: bold; font-size: 14px;
+        #infinity-logo {
+            font-size: 120px; color: #ff0000; text-shadow: 0 0 30px #ff0000;
+            animation: pulse 2s infinite; cursor: pointer; user-select: none;
         }
-        .opt-btn:hover { background: var(--emerald); color: #000; box-shadow: 0 0 20px var(--emerald); }
-
-        /* INPUT BAR */
-        .input-bar { position: fixed; bottom: 35px; left: 50%; transform: translateX(-50%); width: 70%; background: #000; padding: 10px; border-radius: 50px; display: flex; border: 1px solid #333; box-shadow: 0 10px 40px rgba(0,0,0,0.8); }
-        #uInp { flex-grow: 1; background: transparent; border: none; color: #fff; padding: 10px 25px; outline: none; font-size: 16px; }
-        .send-btn { width: 50px; height: 50px; border-radius: 50%; background: var(--emerald); border: none; cursor: pointer; color: #000; font-size: 20px; }
-
-        /* OFFLINE SCREEN */
-        #offline-mode { position: fixed; inset: 0; background: #000; z-index: 9999; display: none; flex-direction: column; align-items: center; justify-content: center; }
-        .inf-icon { font-size: 100px; color: var(--emerald); filter: drop-shadow(0 0 20px var(--emerald)); }
-        .orbit-plane { position: absolute; color: #fff; font-size: 22px; offset-path: path('M10,50 C10,-10 90,-10 110,50 C130,110 190,110 190,50 C190,-10 130,-10 110,50 C90,110 10,110 10,50 Z'); animation: fly 3s infinite linear; }
-        @keyframes fly { from { offset-distance: 0%; } to { offset-distance: 100%; } }
-        @keyframes emerge { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-
-        .italic { font-style: italic; } .calibri { font-family: 'Calibri', sans-serif; }
+        @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.1); } 100% { transform: scale(1); } }
+        
+        #game-ui {
+            position: fixed; bottom: 20px; left: 20px; color: #00ff00;
+            font-family: 'Arial', sans-serif; z-index: 100; text-shadow: 2px 2px black;
+        }
+        #buy-menu {
+            position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            background: rgba(20, 20, 20, 0.9); padding: 30px; border: 3px solid #ff0000;
+            display: none; color: white; text-align: center; z-index: 200; border-radius: 15px;
+        }
+        button { background: #444; color: white; border: 1px solid #ff0000; padding: 10px 20px; margin: 5px; cursor: pointer; }
+        button:hover { background: #ff0000; }
     </style>
 </head>
 <body>
 
-    <div id="offline-mode">
-        <div style="position:relative;">
-            <i class="fas fa-infinity inf-icon"></i>
-            <i class="fas fa-paper-plane orbit-plane"></i>
-        </div>
-        <div style="margin-top: 60px; text-align: center;">
-            <h2 id="off-status">BAĞLANTI ANALİZ EDİLİYOR...</h2>
-            <div id="off-info" style="display:none;">
-                <p>İnternet Bağlantısı Kesildi.</p>
-                <p>İletişim: 0541 211 39 40</p>
-                <button onclick="location.reload()" style="background:var(--emerald); padding:10px 30px; border-radius:15px; border:none; cursor:pointer; font-weight:bold;">Offline Devam Et</button>
-            </div>
-        </div>
+    <div id="loading-screen">
+        <div id="infinity-logo" onclick="startGame()">∞</div>
+        <p style="color: #555; letter-spacing: 5px;">RED INFINITY</p>
     </div>
 
-    <div id="top-bar">
-        <i class="fas fa-bars" onclick="toggleSidebar()" style="color:var(--emerald); cursor:pointer; font-size: 24px;"></i>
-        <span style="margin-left: 20px; font-weight: bold; letter-spacing: 2px; color: var(--emerald);">INFINITY PLUS V7</span>
+    <div id="game-ui">
+        <h1 style="margin:0;">$ <span id="money">800</span></h1>
+        <p>HEALTH: 100</p>
     </div>
 
-    <div id="sidebar">
-        <div style="background:#1a1a1a; padding:20px; border-radius:20px; margin-bottom:20px;">
-            <h4 style="color:var(--emerald); margin:0;">İLETİŞİM</h4>
-            <p style="font-size:13px; color:#aaa;">0541 211 39 40<br>+90 Türkiye</p>
-        </div>
-        <button onclick="window.open('https://github.com/cagriatav8-sudo/aicagri/blob/main/index.html')" style="width:100%; background:var(--emerald); padding:15px; border-radius:15px; border:none; font-weight:bold; cursor:pointer;">HTML KODLARI</button>
-        <p onclick="triggerOffline()" style="color:red; cursor:pointer; text-align:center; margin-top:20px; font-size:12px;">Bağlantıyı Kes (Test)</p>
+    <div id="buy-menu">
+        <h2 style="color: #ff0000;">EQUIPMENT</h2>
+        <button onclick="buyWeapon('AK-47', 2700)">AK-47 ($2700)</button><br>
+        <button onclick="buyWeapon('AWP', 4750)">AWP ($4750)</button><br>
+        <button onclick="buyWeapon('DEAGLE', 700)">DEAGLE ($700)</button><br><br>
+        <button onclick="closeBuyMenu()" style="border-color: white;">CLOSE (B)</button>
     </div>
 
-    <div id="viewport">
-        <div class="msg ai">
-            <strong>Sistem Başlatıldı.</strong> <br>
-            Bir kavramın ismini yazıp yanına "tanımı" derseniz size iki seçenek sunarım. 
-            (Örn: <b>"İstanbul tanımı"</b> veya <b>"Hücre tanımı"</b>)
-        </div>
-    </div>
+    <a-scene>
+        <a-sky color="#111"></a-sky>
+        <a-plane rotation="-90 0 0" width="100" height="100" color="#1a1a1a"></a-plane>
 
-    <div class="input-bar">
-        <input type="text" id="uInp" placeholder="Örn: Karadelik tanımı..." autofocus>
-        <button class="send-btn" onclick="process()"><i class="fas fa-paper-plane"></i></button>
-    </div>
+        <a-box id="enemy-bot" position="0 1.5 -10" color="#ff0000" 
+               animation="property: position; to: 5 1.5 -10; dir: alternate; dur: 2000; loop: true"
+               class="target">
+            <a-text value="ENEMY" align="center" position="0 1.2 0" scale="0.8 0.8 0.8"></a-text>
+        </a-box>
+
+        <a-entity id="rig" position="0 0 0">
+            <a-camera id="cam" look-controls wasd-controls>
+                <a-cursor color="red" scale="0.5 0.5 0.5"></a-cursor>
+                
+                <a-entity id="weapon-model" position="0.5 -0.4 -0.6" rotation="0 -90 0">
+                    <a-box width="0.4" height="0.1" depth="0.1" color="#333"></a-box>
+                    <a-box width="0.1" height="0.2" depth="0.08" color="#222" position="-0.15 -0.1 0"></a-box>
+                </a-entity>
+            </a-camera>
+        </a-entity>
+    </a-scene>
 
     <script>
-        let styles = [];
-        const wikiDB = {
-            "istanbul": "İstanbul, Türkiye'nin en büyük şehri ve ekonomik merkezidir. 1453'te fethedilmiştir.",
-            "hücre": "Hücre, canlıların yapı taşıdır. Organellerden ve genetik materyalden oluşur.",
-            "karadelik": "Karadelik, ışığın bile kaçamadığı çok güçlü çekim gücüne sahip gök cismidir.",
-            "atatürk": "Mustafa Kemal Atatürk, Türkiye Cumhuriyeti'nin kurucusu ve ilk Cumhurbaşkanıdır.",
-            "güneş": "Güneş, Güneş sisteminin merkezinde yer alan, orta büyüklükte bir yıldızdır."
-        };
+        let money = 800;
 
-        function toggleSidebar() { document.getElementById('sidebar').classList.toggle('active'); }
-
-        function triggerOffline() {
-            document.getElementById('offline-mode').style.display = 'flex';
-            setTimeout(() => {
-                document.getElementById('off-status').innerText = "İNTERNET BAĞLANTISI KESİLDİ.";
-                document.getElementById('off-info').style.display = 'block';
-            }, 5000);
+        function startGame() {
+            document.getElementById('loading-screen').style.opacity = '0';
+            setTimeout(() => { document.getElementById('loading-screen').style.display = 'none'; }, 1500);
         }
 
-        function process() {
-            const input = document.getElementById('uInp');
-            const val = input.value.trim();
-            if(!val) return;
-            render(val, 'user');
-            input.value = '';
+        // B tuşu ile marketi aç/kapat
+        window.addEventListener('keydown', (e) => {
+            if (e.key.toLowerCase() === 'b') {
+                const menu = document.getElementById('buy-menu');
+                menu.style.display = (menu.style.display === 'none' || menu.style.display === '') ? 'block' : 'none';
+            }
+        });
 
-            setTimeout(() => {
-                if(val.toLowerCase().includes("tanımı")) {
-                    const concept = val.toLowerCase().replace("tanımı", "").trim();
-                    askOptions(concept);
-                } else {
-                    render(solve(val.toLowerCase()), 'ai');
-                }
-            }, 600);
+        function closeBuyMenu() { document.getElementById('buy-menu').style.display = 'none'; }
+
+        function buyWeapon(name, price) {
+            if (money >= price) {
+                money -= price;
+                updateMoney();
+                alert(name + " alındı! Bol şans asker.");
+                closeBuyMenu();
+            } else {
+                alert("Yetersiz bakiye!");
+            }
         }
 
-        function askOptions(concept) {
-            const area = document.getElementById('viewport');
-            const div = document.createElement('div');
-            div.className = 'msg ai';
-            div.innerHTML = `
-                <strong>"${concept.toUpperCase()}"</strong> tanımı için bir yöntem seçin:
-                <div class="option-container">
-                    <button class="opt-btn" onclick="actionLink('${concept}')">1. Siteye giderek öğren (Dış Bağlantı)</button>
-                    <button class="opt-btn" onclick="actionWiki('${concept}')">2. Bu sitede öğren (Wikipedia Verisi)</button>
-                </div>
-            `;
-            area.appendChild(div);
-            area.scrollTop = area.scrollHeight;
+        function updateMoney() {
+            document.getElementById('money').innerText = money;
         }
 
-        function actionLink(c) {
-            render("Siteye yönlendiriliyorsunuz...", "ai");
-            setTimeout(() => {
-                window.open(`https://www.google.com/search?q=${c}+nedir`, '_blank');
-            }, 1000);
-        }
+        // ATEŞ ETME VE PARA KAZANMA
+        document.querySelector('a-scene').addEventListener('mousedown', function (evt) {
+            // Silah tepme animasyonu (Hafif geri gitme)
+            const weapon = document.getElementById('weapon-model');
+            weapon.setAttribute('animation', 'property: position; to: 0.5 -0.4 -0.5; dur: 50; dir: alternate; loop: 1');
 
-        function actionWiki(c) {
-            const definition = wikiDB[c] || `"${c}" hakkında yerel veritabanında bilgi bulunamadı, ancak genel tarama aktif.`;
-            render(`<strong>Wikipedia Verisi:</strong> <br> ${definition}`, "ai");
-        }
-
-        function render(text, type) {
-            const v = document.getElementById('viewport');
-            const d = document.createElement('div');
-            d.className = `msg ${type}`;
-            if(type === 'ai') styles.forEach(s => d.classList.add(s));
-            d.innerHTML = text;
-            v.appendChild(d);
-            v.scrollTop = v.scrollHeight;
-        }
-
-        function solve(q) {
-            if(q.includes("italik")) { styles.push('italic'); return "İtalik mod aktif."; }
-            if(q.includes("calibri")) { styles.push('calibri'); return "Font: Calibri."; }
-            if(q.includes("nasılsın")) return "Harikayım! Yeni interaktif buton modülümle kendimi çok daha zeki hissediyorum.";
-            return `"${q}" sorgusu 3000 satırlık mantık havuzunda işlendi. Tanım almak için kelimenin yanına "tanımı" yazın efendim.`;
-        }
-
-        document.getElementById('uInp').addEventListener('keypress', (e) => { if(e.key === 'Enter') process(); });
+            // Hedefi vurup vurmadığını kontrol et
+            const cursor = document.querySelector('a-cursor');
+            let intersection = cursor.components.raycaster.getIntersection(document.getElementById('enemy-bot'));
+            
+            if (intersection) {
+                console.log("BOT VURULDU!");
+                money += 300; // Adam vurunca 300$ gelsin
+                updateMoney();
+                
+                // Botu geçici olarak gizle (Ölme efekti)
+                const bot = document.getElementById('enemy-bot');
+                bot.setAttribute('visible', 'false');
+                setTimeout(() => { 
+                    bot.setAttribute('position', `${Math.random()*10 - 5} 1.5 -10`); 
+                    bot.setAttribute('visible', 'true'); 
+                }, 1000);
+            }
+        });
     </script>
 </body>
 </html>
