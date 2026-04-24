@@ -59,4 +59,75 @@
             <a-text value="ENEMY" align="center" position="0 1.2 0" scale="0.8 0.8 0.8"></a-text>
         </a-box>
 
-        <a-entity id="rig" position="0 0
+        <a-entity id="rig" position="0 0 0">
+            <a-camera id="cam" look-controls wasd-controls>
+                <a-cursor color="red" scale="0.5 0.5 0.5"></a-cursor>
+                
+                <a-entity id="weapon-model" position="0.5 -0.4 -0.6" rotation="0 -90 0">
+                    <a-box width="0.4" height="0.1" depth="0.1" color="#333"></a-box>
+                    <a-box width="0.1" height="0.2" depth="0.08" color="#222" position="-0.15 -0.1 0"></a-box>
+                </a-entity>
+            </a-camera>
+        </a-entity>
+    </a-scene>
+
+    <script>
+        let money = 800;
+
+        function startGame() {
+            document.getElementById('loading-screen').style.opacity = '0';
+            setTimeout(() => { document.getElementById('loading-screen').style.display = 'none'; }, 1500);
+        }
+
+        // B tuşu ile marketi aç/kapat
+        window.addEventListener('keydown', (e) => {
+            if (e.key.toLowerCase() === 'b') {
+                const menu = document.getElementById('buy-menu');
+                menu.style.display = (menu.style.display === 'none' || menu.style.display === '') ? 'block' : 'none';
+            }
+        });
+
+        function closeBuyMenu() { document.getElementById('buy-menu').style.display = 'none'; }
+
+        function buyWeapon(name, price) {
+            if (money >= price) {
+                money -= price;
+                updateMoney();
+                alert(name + " alındı! Bol şans asker.");
+                closeBuyMenu();
+            } else {
+                alert("Yetersiz bakiye!");
+            }
+        }
+
+        function updateMoney() {
+            document.getElementById('money').innerText = money;
+        }
+
+        // ATEŞ ETME VE PARA KAZANMA
+        document.querySelector('a-scene').addEventListener('mousedown', function (evt) {
+            // Silah tepme animasyonu (Hafif geri gitme)
+            const weapon = document.getElementById('weapon-model');
+            weapon.setAttribute('animation', 'property: position; to: 0.5 -0.4 -0.5; dur: 50; dir: alternate; loop: 1');
+
+            // Hedefi vurup vurmadığını kontrol et
+            const cursor = document.querySelector('a-cursor');
+            let intersection = cursor.components.raycaster.getIntersection(document.getElementById('enemy-bot'));
+            
+            if (intersection) {
+                console.log("BOT VURULDU!");
+                money += 300; // Adam vurunca 300$ gelsin
+                updateMoney();
+                
+                // Botu geçici olarak gizle (Ölme efekti)
+                const bot = document.getElementById('enemy-bot');
+                bot.setAttribute('visible', 'false');
+                setTimeout(() => { 
+                    bot.setAttribute('position', `${Math.random()*10 - 5} 1.5 -10`); 
+                    bot.setAttribute('visible', 'true'); 
+                }, 1000);
+            }
+        });
+    </script>
+</body>
+</html>
